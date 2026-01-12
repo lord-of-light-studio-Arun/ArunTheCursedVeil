@@ -48,7 +48,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputMappingContext* DefaultMappingContext;
 
-	/** Jump Input Action */
+	/** Jump: Input Action */
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* JumpAction;
 
@@ -261,7 +261,7 @@ public:
 
 	// ~end CombatTest_IAttack interface
 
-	// ~begin CombatDamageable interface
+	// ~begin CombatTest_IDamage interface
 
 	/** Handles damage and knockback events */
 	virtual void ApplyDamage(float Damage, AActor* DamageCauser, const FVector& DamageLocation, const FVector& DamageImpulse) override;
@@ -269,7 +269,7 @@ public:
 	/** Handles death events */
 	virtual void HandleDeath() override;
 
-	// ~end CombatDamageable interface
+	// ~end CombatTest_IDamage interface
 
 	/** Overrides the default TakeDamage functionality */
 	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;

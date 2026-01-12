@@ -11,7 +11,6 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Engine/DamageEvents.h"
-#include "ArunTheCursedVeil.h"
 
 ACombatTest_Character::ACombatTest_Character()
 {
@@ -70,7 +69,7 @@ void ACombatTest_Character::BeginPlay()
 
 void ACombatTest_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	if (const APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 			// Add the mapping context
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
@@ -112,7 +111,7 @@ void ACombatTest_Character::SetupPlayerInputComponent(UInputComponent* PlayerInp
 void ACombatTest_Character::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
-	FVector2D MovementVector = Value.Get<FVector2D>();
+	const FVector2D MovementVector = Value.Get<FVector2D>();
 
 	// route the input
 	DoMove(MovementVector.X, MovementVector.Y);
@@ -121,7 +120,7 @@ void ACombatTest_Character::Move(const FInputActionValue& Value)
 void ACombatTest_Character::Look(const FInputActionValue& Value)
 {
 	// input is a Vector2D
-	FVector2D LookAxisVector = Value.Get<FVector2D>();
+	const FVector2D LookAxisVector = Value.Get<FVector2D>();
 
 	// route the input
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
@@ -145,7 +144,7 @@ void ACombatTest_Character::ChargedAttackReleased()
 	DoChargedAttackEnd();
 }
 
-void ACombatTest_Character::DoMove(float Right, float Forward)
+void ACombatTest_Character::DoMove(const float Right, const float Forward)
 {
 	if (GetController() != nullptr)
 	{
@@ -165,7 +164,7 @@ void ACombatTest_Character::DoMove(float Right, float Forward)
 	}
 }
 
-void ACombatTest_Character::DoLook(float Yaw, float Pitch)
+void ACombatTest_Character::DoLook(const float Yaw, const float Pitch)
 {
 	if (GetController() != nullptr)
 	{
@@ -262,10 +261,10 @@ void ACombatTest_Character::ComboAttack()
 	// play the attack montage
 	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
 	{
-		const float MontageLength = AnimInstance->Montage_Play(ComboAttackMontage, 1.0f, EMontagePlayReturnType::MontageLength, 0.0f, true);
-
 		// subscribe to montage completed and interrupted events
-		if (MontageLength > 0.0f)
+		if (const float MontageLength =
+			AnimInstance->Montage_Play(ComboAttackMontage, 1.0f, EMontagePlayReturnType::MontageLength, 
+				0.0f, true); MontageLength > 0.0f)
 		{
 			// set the end delegate for the montage
 			AnimInstance->Montage_SetEndDelegate(OnAttackMontageEnded, ComboAttackMontage);
@@ -318,7 +317,7 @@ void ACombatTest_Character::AttackMontageEnded(UAnimMontage* Montage, bool bInte
 	}
 }
 
-void ACombatTest_Character::DoAttackTrace(FName DamageSourceBone)
+void ACombatTest_Character::DoAttackTrace(const FName DamageSourceBone)
 {
 	// sweep for objects in front of the character to be hit by the attack
 	TArray<FHitResult> OutHits;
@@ -345,9 +344,8 @@ void ACombatTest_Character::DoAttackTrace(FName DamageSourceBone)
 		for (const FHitResult& CurrentHit : OutHits)
 		{
 			// check if we've hit a damageable actor
-			ICombatTest_IDamage* Damageable = Cast<ICombatTest_IDamage>(CurrentHit.GetActor());
 
-			if (Damageable)
+			if (ICombatTest_IDamage* Damageable = Cast<ICombatTest_IDamage>(CurrentHit.GetActor()))
 			{
 				// knock upwards and away from the impact normal
 				const FVector Impulse = (CurrentHit.ImpactNormal * -MeleeKnockbackImpulse) + (FVector::UpVector * MeleeLaunchImpulse);
@@ -402,14 +400,13 @@ void ACombatTest_Character::CheckChargedAttack()
 	}
 }
 
-void ACombatTest_Character::ApplyDamage(float Damage, AActor* DamageCauser, const FVector& DamageLocation, const FVector& DamageImpulse)
+void ACombatTest_Character::ApplyDamage(const float Damage, AActor* DamageCauser, const FVector& DamageLocation, const FVector& DamageImpulse)
 {
 	// pass the damage event to the actor
-	FDamageEvent DamageEvent;
-	const float ActualDamage = TakeDamage(Damage, DamageEvent, nullptr, DamageCauser);
+	const FDamageEvent DamageEvent;
 
 	// only process knockback and effects if we received nonzero damage
-	if (ActualDamage > 0.0f)
+	if (const float ActualDamage = TakeDamage(Damage, DamageEvent, nullptr, DamageCauser) > 0.0f)
 	{
 		// apply the knockback impulse
 		GetCharacterMovement()->AddImpulse(DamageImpulse, true);
