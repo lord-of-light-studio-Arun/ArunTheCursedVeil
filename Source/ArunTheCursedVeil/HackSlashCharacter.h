@@ -6,6 +6,8 @@
 #include "GameFramework/Character.h"
 #include "HackSlashCharacter.generated.h"
 
+class UInputAction;
+class UInputMappingContext;
 struct FInputActionValue;
 
 UCLASS()
@@ -23,14 +25,35 @@ public:
 	// Sets default values for this character's properties
 	AHackSlashCharacter();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
-	UAnimMontage* JumpMontage;
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float WalkSpeed = 400.f;
+
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float RunSpeed = 700.f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UInputMappingContext* InputMappingContext;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UInputAction* MoveAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UInputAction* JumpAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UInputAction* RunAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UInputAction* MouseLookAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UInputAction* AttackAction;
+	
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
+	// UAnimMontage* JumpMontage;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
-	UAnimMontage* ComboAttackMontage;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
-	UAnimMontage* ChargedAttackMontage;
+	UAnimMontage* AttackMontage;
 	
 protected:
 	// Called when the game starts or when spawned
@@ -38,26 +61,23 @@ protected:
 
 	// Called for movement input
 	void Move(const FInputActionValue& Value);
+
+	void Look(const FInputActionValue& Value);
 	
-	virtual void Jump() override;
+	// virtual void Jump() override;
 	
-	void ComboAttack();
+	virtual void DoRunStart();
+
+	virtual void DoRunEnd();
 	
-	void ChargedAttack();
+	void DoAttack();
 	
 	bool IsAttacking() const;
-	
-	int IComboAttackIndex = 0;
-
-	bool bCharging = false;
-	bool bCharged = false;
 	
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
 public:
-	UFUNCTION()
-	void HandleOnMontageNotifyBegin(FName A_NNotifyName, const FBranchingPointNotifyPayload& A_PBranchingPayload);
 	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

@@ -2,7 +2,8 @@
 
 
 #include "HackSlashCharacter.h"
-
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -30,7 +31,7 @@ AHackSlashCharacter::AHackSlashCharacter()
 	// instead of recompiling to adjust them
 	GetCharacterMovement()->JumpZVelocity = 500.f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	// GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
@@ -51,9 +52,6 @@ AHackSlashCharacter::AHackSlashCharacter()
 void AHackSlashCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	if (UAnimInstance* PAnimInstance = GetMesh()->GetAnimInstance())
-		PAnimInstance->OnPlayMontageNotifyBegin.AddDynamic(this, &AHackSlashCharacter::HandleOnMontageNotifyBegin);
 }
 
 void AHackSlashCharacter::Move(const FInputActionValue& Value)
@@ -79,7 +77,20 @@ void AHackSlashCharacter::Move(const FInputActionValue& Value)
 	}
 }
 
-void AHackSlashCharacter::Jump()
+void AHackSlashCharacter::Look(const FInputActionValue& Value)
+{
+	// input is a Vector2D
+	const FVector2D LookAxisVector = Value.Get<FVector2D>();
+
+	if (GetController())
+	{
+		// add yaw and pitch input to controller
+		AddControllerYawInput(LookAxisVector.X);
+		AddControllerPitchInput(LookAxisVector.Y);
+	}
+}
+
+/*void AHackSlashCharacter::Jump()
 {
 	if (!IsAttacking())
 	{
@@ -88,54 +99,32 @@ void AHackSlashCharacter::Jump()
 			if (UAnimInstance* PAnimInstance = GetMesh()->GetAnimInstance())
 				PAnimInstance->Montage_Play(JumpMontage);
 	}
+}*/
+
+void AHackSlashCharacter::DoRunStart()
+{
+	GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
 }
 
-void AHackSlashCharacter::ComboAttack()
+void AHackSlashCharacter::DoRunEnd()
 {
-	bCharging = false;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void AHackSlashCharacter::DoAttack()
+{
 	if (!IsAttacking() && CanJump())
-		if (!bCharged)
-			if (UAnimInstance* PAnimInstance = GetMesh()->GetAnimInstance())
-				if (ComboAttackMontage)
-					PAnimInstance->Montage_Play(ComboAttackMontage);
-		else bCharged = false;
-	else IComboAttackIndex = 1;
-}
-
-void AHackSlashCharacter::ChargedAttack()
-{
-	if (CanJump())
-	{
-		bCharging = true;
-		FTimerHandle TimerHandle;
-		GetWorldTimerManager().SetTimer(TimerHandle, [&]
-		{
-			if (bCharging)
-				if (UAnimInstance* PAnimInstance = GetMesh()->GetAnimInstance()) {
-					if (ChargedAttackMontage)
-						PAnimInstance->Montage_Play(ChargedAttackMontage);
-					bCharging = false;
-					bCharged = true;
-				}
-		}, 1, false);
-	}
+		if (UAnimInstance* PAnimInstance = GetMesh()->GetAnimInstance())
+			if (AttackMontage)
+				PAnimInstance->Montage_Play(AttackMontage);
 }
 
 bool AHackSlashCharacter::IsAttacking() const
 {
-	if (CanJump())
-		if (const UAnimInstance* PAnimInstance = GetMesh()->GetAnimInstance())
-			if (PAnimInstance->Montage_IsPlaying(ComboAttackMontage))
-				return true;
+	if (const UAnimInstance* PAnimInstance = GetMesh()->GetAnimInstance())
+		if (PAnimInstance->Montage_IsPlaying(AttackMontage))
+			return true;
 	return false;
-}
-
-void AHackSlashCharacter::HandleOnMontageNotifyBegin(FName A_NNotifyName,
-                                                     const FBranchingPointNotifyPayload& A_PBranchingPayload)
-{
-	if (--IComboAttackIndex < 0)
-		if (UAnimInstance* PAnimInstance = GetMesh()->GetAnimInstance())
-			PAnimInstance->Montage_Stop(0.4, ComboAttackMontage);
 }
 
 // Called every frame
@@ -149,6 +138,34 @@ void AHackSlashCharacter::Tick(const float DeltaTime)
 void AHackSlashCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	if (const APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+			// Add the mapping context
+			Subsystem->AddMappingContext(InputMappingContext, 0);
 
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	// Set up action bindings
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
+
+		// Jumping
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+
+		// Moving
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AHackSlashCharacter::Move);
+		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &AHackSlashCharacter::Look);
+
+		// Running
+		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Triggered, this, &AHackSlashCharacter::DoRunStart);
+		EnhancedInputComponent->BindAction(RunAction, ETriggerEvent::Completed, this, &AHackSlashCharacter::DoRunEnd);
+
+		// Attacking
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &AHackSlashCharacter::DoAttack);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
+	}
 }
 

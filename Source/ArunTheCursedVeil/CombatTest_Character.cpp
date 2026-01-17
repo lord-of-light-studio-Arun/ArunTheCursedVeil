@@ -166,7 +166,7 @@ void ACombatTest_Character::DoMove(const float Right, const float Forward)
 
 void ACombatTest_Character::DoLook(const float Yaw, const float Pitch)
 {
-	if (GetController() != nullptr)
+	if (GetController())
 	{
 		// add yaw and pitch input to controller
 		AddControllerYawInput(Yaw);
@@ -411,7 +411,7 @@ void ACombatTest_Character::ApplyDamage(const float Damage, AActor* DamageCauser
 		// apply the knockback impulse
 		GetCharacterMovement()->AddImpulse(DamageImpulse, true);
 
-		// is the character ragdolling?
+		// is the character "ragdoll"ing?
 		if (GetMesh()->IsSimulatingPhysics())
 		{
 			// apply an impulse to the ragdoll
