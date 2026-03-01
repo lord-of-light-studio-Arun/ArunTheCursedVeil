@@ -13,5 +13,5 @@ class ARUNTHECURSEDVEIL_API UFindPlayerLocationBTTask : public UBTTask_Blackboar
 	
 public:
 	UFindPlayerLocationBTTask(const FObjectInitializer& ObjectInitializer);
-	EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& TreeComponent, uint8* NodeMemory) override;
+	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& TreeComponent, uint8* NodeMemory) override;
 };

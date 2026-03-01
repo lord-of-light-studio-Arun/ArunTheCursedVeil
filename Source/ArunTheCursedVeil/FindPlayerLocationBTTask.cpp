@@ -8,7 +8,7 @@
 
 UFindPlayerLocationBTTask::UFindPlayerLocationBTTask(const FObjectInitializer& ObjectInitializer)
 {
-	NodeName = TEXT("FindPlayerLocation");
+	NodeName = TEXT("Find Player Location");
 }
 
 EBTNodeResult::Type UFindPlayerLocationBTTask::ExecuteTask(UBehaviorTreeComponent& TreeComponent, uint8* NodeMemory)
